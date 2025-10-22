@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: modal.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: modal.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module modal
+ * @description
+ * Controls the display and behavior of modal dialogs (pop-ups) in the UI.
+ * Handles opening, closing, and content management for modals.
+ */
+
+let currentVideoContext = null;
+let lastOpenedContent = null;
+
+/**
+ * Displays the modal for a film with its details.
+ *
+ * @function
+ * @param {Object} film - The film object to display.
+ * @returns {void}
+ */
+function showFilmModal(film) {
+  if (film) openModal(film.title, "film", 0);
+}
+
+/**
+ * Displays the modal for a series with its details and selected season.
+ *
+ * @function
+ * @param {Object} series - The series object to display.
+ * @param {string|number} season - The season to display.
+ * @returns {void}
+ */
+function showSeriesModal(series, season) {
+  if (series) openModal(series.title, "series", season);
+}
+
+/**
+ * Opens the modal for a given content item (film or series).
+ *
+ * @function
+ * @param {string} title - The title of the content.
+ * @param {string} type - The type of content ("film" or "series").
+ * @param {string|number} season - The season to display (for series).
+ * @returns {void}
+ */
+function openModal(title, type, season) {
+  const item = type === "film" ? filmsData[title] : seriesData[title];
+  if (!item) return;
+
+  const modalBody = document.getElementById("modalBody");
+  modalBody.innerHTML = createModalContent(item, type);
+  modal.classList.add("active");
+  document.body.style.overflow = "hidden";
+
+  if (type === "series" &amp;&amp; item.seasons) {
+    setupSeriesModal(item, season);
+  }
+  currentVideoContext = null;
+}
+
+/**
+ * Generates the HTML content for the modal based on the item and its type.
+ *
+ * @function
+ * @param {Object} item - The content item (film or series).
+ * @param {string} type - The type of content ("film" or "series").
+ * @returns {string} The HTML string for the modal content.
+ */
+function createModalContent(item, type) {
+  const genres = item.genres
+    ? item.genres.map((g) => `&lt;span class="genre-tag">${g}&lt;/span>`).join("")
+    : "";
+  const rating = item.IMDb
+    ? `&lt;div class="modal-rating">&lt;i class="fas fa-star">&lt;/i> ${item.IMDb}/10&lt;/div>`
+    : "";
+  const year = item.year ? `&lt;span class="year-tag">${item.year}&lt;/span>` : "";
+  const directors = item.directors
+    ? `&lt;p>&lt;strong>Réalisateurs:&lt;/strong> ${item.directors.join(", ")}&lt;/p>`
+    : "";
+  const writers = item.writers
+    ? `&lt;p>&lt;strong>Scénaristes:&lt;/strong> ${item.writers.join(", ")}&lt;/p>`
+    : "";
+  const stars = item.stars
+    ? `&lt;p>&lt;strong>Acteurs:&lt;/strong> ${item.stars.join(", ")}&lt;/p>`
+    : "";
+  const creators = item.creators
+    ? `&lt;p>&lt;strong>Créateurs:&lt;/strong> ${item.creators.join(", ")}&lt;/p>`
+    : "";
+
+  let watchedInfo = "";
+  if (type === "film") {
+    const watchData = getFilmWatchData(item.title);
+    if (watchData.watched) {
+      watchedInfo = `&lt;span class="watched-badge" title="Déjà vu">&lt;i class="fas fa-eye">&lt;/i> Vu&lt;/span>`;
+    }
+  }
+
+  const watchButton =
+    type === "film" &amp;&amp; item.video
+      ? `&lt;button class="btn btn-primary" onclick="playVideo('${
+          item.video
+        }', 'film', '${escapeForHTML(item.title)}')">
+      &lt;i class="fas fa-play">&lt;/i> Regarder
+    &lt;/button>`
+      : "";
+
+  const trailerButton = item.trailer
+    ? `&lt;a href="${item.trailer}" target="_blank" class="btn btn-secondary">
+      &lt;i class="fas fa-external-link-alt">&lt;/i> Bande-annonce
+    &lt;/a>`
+    : "";
+
+  const imdbButton = item.IMDb_link
+    ? `&lt;a href="${item.IMDb_link}" target="_blank" class="btn btn-secondary">
+      &lt;i class="fas fa-external-link-alt">&lt;/i> IMDb
+    &lt;/a>`
+    : "";
+
+  return `
+    &lt;div class="modal-body">
+      &lt;div class="modal-header">
+        &lt;div class="modal-poster">
+          ${
+            item.banner
+              ? `&lt;img src="${item.banner}" alt="${item.title}" class="modal-poster">`
+              : '&lt;div class="modal-poster" style="display: flex; align-items: center; justify-content: center; background-color: var(--bg-card);">&lt;i class="fas fa-film" style="font-size: 3rem; color: var(--text-secondary);">&lt;/i>&lt;/div>'
+          }
+        &lt;/div>
+        &lt;div class="modal-info">
+          &lt;h2 class="modal-title">${item.title} ${watchedInfo}&lt;/h2>
+          &lt;div class="modal-meta">
+            ${rating}
+            ${year}
+            &lt;div class="card-genres">${genres}&lt;/div>
+          &lt;/div>
+          &lt;p class="modal-description">${
+            item.description || "Aucune description disponible."
+          }&lt;/p>
+          &lt;div class="modal-cast">
+            ${directors}
+            ${creators}
+            ${writers}
+            ${stars}
+          &lt;/div>
+          &lt;div class="action-buttons">
+            ${watchButton}
+            ${trailerButton}
+            ${imdbButton}
+          &lt;/div>
+        &lt;/div>
+      &lt;/div>
+      ${type === "series" ? '&lt;div id="seasonsContainer">&lt;/div>' : ""}
+    &lt;/div>
+  `;
+}
+
+/**
+ * Sets up the modal for a series, displaying seasons and episodes.
+ *
+ * @function
+ * @param {Object} series - The series object.
+ * @param {string|number} defaultSeason - The season to display initially.
+ * @returns {void}
+ */
+function setupSeriesModal(series, defaultSeason) {
+  if (!series.seasons) return;
+
+  const seasonsContainer = document.getElementById("seasonsContainer");
+  const seasons = Object.keys(series.seasons);
+  const initialSeason =
+    defaultSeason &amp;&amp; seasons.includes(defaultSeason)
+      ? defaultSeason
+      : seasons[0];
+
+  seasonsContainer.innerHTML = `
+    &lt;div class="seasons-section">
+      &lt;h3>Saisons et Épisodes&lt;/h3>
+      &lt;div class="seasons-nav">
+        ${seasons
+          .map(
+            (season) => `&lt;button class="season-btn ${
+              season === initialSeason ? "active" : ""
+            }" data-season="${season}">
+            Saison ${season}
+          &lt;/button>`
+          )
+          .join("")}
+      &lt;/div>
+      &lt;div id="episodesContainer">&lt;/div>
+    &lt;/div>
+  `;
+
+  const seasonBtns = seasonsContainer.querySelectorAll(".season-btn");
+  seasonBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seasonBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      displayEpisodes(series, btn.dataset.season);
+    });
+  });
+
+  displayEpisodes(series, initialSeason);
+}
+
+/**
+ * Displays the episodes for a given series and season in the modal.
+ *
+ * @function
+ * @param {Object} series - The series object.
+ * @param {string|number} seasonNumber - The season number to display.
+ * @returns {void}
+ */
+function displayEpisodes(series, seasonNumber) {
+  const episodes = series.seasons[seasonNumber];
+  const episodesContainer = document.getElementById("episodesContainer");
+
+  if (!episodes || episodes.length === 0) {
+    episodesContainer.innerHTML =
+      "&lt;p>Aucun épisode disponible pour cette saison.&lt;/p>";
+    return;
+  }
+
+  episodesContainer.innerHTML = episodes
+    .map((episode, index) => {
+      const watchData = getEpisodeWatchData(series.title, seasonNumber, index);
+      const watchedClass = watchData.watched ? "watched-episode" : "";
+      const watchedBadge = watchData.watched
+        ? `&lt;span class="watched-badge" title="Déjà vu">&lt;i class="fas fa-eye">&lt;/i>&lt;/span>`
+        : "";
+      return `
+        &lt;div class="episode-item ${watchedClass}" onclick="playVideo('${
+        episode.video
+      }', 'series', '${escapeForHTML(
+        series.title
+      )}', '${seasonNumber}', ${index})">
+          &lt;div class="episode-number">E${index + 1}&lt;/div>
+          &lt;div class="episode-info">
+            &lt;div class="episode-title">${episode.title} ${watchedBadge}&lt;/div>
+            &lt;div class="episode-description">${episode.desc}&lt;/div>
+          &lt;/div>
+          &lt;div style="display: flex; align-items: center;">
+            &lt;i class="fas fa-play" style="color: var(--accent);">&lt;/i>
+          &lt;/div>
+        &lt;/div>
+      `;
+    })
+    .join("");
+}
+
+/**
+ * Plays a video (film or episode) in the video modal, resuming from last watched time if available.
+ *
+ * @function
+ * @param {string} videoPath - The path to the video file.
+ * @param {string} type - The type of content ("film" or "series").
+ * @param {string} title - The title of the content.
+ * @param {string|number} [season] - The season number (for series).
+ * @param {number} [epIndex] - The episode index (for series).
+ * @returns {void}
+ */
+function playVideo(videoPath, type, title, season, epIndex) {
+  if (!videoPath) {
+    alert("Vidéo non disponible");
+    return;
+  }
+
+  lastOpenedContent = { type, title, season, epIndex };
+
+  videoPlayer.src = videoPath;
+  videoModal.classList.add("active");
+  modal.classList.remove("active");
+  document.body.style.overflow = "hidden";
+
+  let startTime = 0;
+  if (type === "film") {
+    const watchData = getFilmWatchData(title);
+    startTime = watchData.time || 0;
+    currentVideoContext = { type, title };
+  } else if (type === "series") {
+    const watchData = getEpisodeWatchData(title, season, epIndex);
+    startTime = watchData.time || 0;
+    currentVideoContext = { type, title, season, epIndex };
+  }
+  videoPlayer.currentTime = startTime;
+  setTimeout(() => {
+    videoPlayer.currentTime = startTime;
+  }, 100);
+
+  videoPlayer.play();
+}
+
+/**
+ * Handles updating watch progress while the video is playing.
+ *
+ * @function
+ * @returns {void}
+ */
+function handleVideoTimeUpdate() {
+  if (!currentVideoContext) return;
+  const { type, title, season, epIndex } = currentVideoContext;
+  const duration = videoPlayer.duration || 1;
+  const current = videoPlayer.currentTime;
+
+  if (type === "film") {
+    markFilmWatched(title, false, current);
+  } else if (type === "series") {
+    markEpisodeWatched(title, season, epIndex, false, current);
+  }
+
+  const remaining = duration - current;
+  if (remaining &lt;= 180) {
+    if (type === "film") {
+      markFilmWatched(title, true, 0);
+    } else if (type === "series") {
+      markEpisodeWatched(title, season, epIndex, true, 0);
+    }
+  }
+}
+
+/**
+ * Handles marking content as watched when the video ends.
+ *
+ * @function
+ * @returns {void}
+ */
+function handleVideoEnded() {
+  if (!currentVideoContext) return;
+  const { type, title, season, epIndex } = currentVideoContext;
+  if (type === "film") {
+    markFilmWatched(title, true, 0);
+  } else if (type === "series") {
+    markEpisodeWatched(title, season, epIndex, true, 0);
+  }
+}
+
+/**
+ * Handles saving watch progress when the video is paused.
+ *
+ * @function
+ * @returns {void}
+ */
+function handleVideoPause() {
+  if (!currentVideoContext) return;
+  const { type, title, season, epIndex } = currentVideoContext;
+  const current = videoPlayer.currentTime;
+  if (type === "film") {
+    markFilmWatched(title, false, current);
+  } else if (type === "series") {
+    markEpisodeWatched(title, season, epIndex, false, current);
+  }
+}
+
+/**
+ * Closes all modals and restores the previous state.
+ *
+ * @function
+ * @returns {void}
+ */
+function closeModals() {
+  const wasVideoModalActive = videoModal.classList.contains("active");
+  modal.classList.remove("active");
+  videoModal.classList.remove("active");
+  document.body.style.overflow = "auto";
+
+  if (videoPlayer) {
+    videoPlayer.pause();
+    videoPlayer.src = "";
+  }
+  currentVideoContext = null;
+
+  if (wasVideoModalActive &amp;&amp; lastOpenedContent) {
+    if (lastOpenedContent.type === "film") {
+      showFilmModal(getFilmByTitle(lastOpenedContent.title));
+    } else if (lastOpenedContent.type === "series") {
+      showSeriesModal(
+        getSeriesByTitle(lastOpenedContent.title),
+        lastOpenedContent.season
+      );
+    }
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-add.html">add</a></li><li><a href="module-dataLoader.html">dataLoader</a></li><li><a href="module-display.html">display</a></li><li><a href="module-error.html">error</a></li><li><a href="module-filters.html">filters</a></li><li><a href="module-init.html">init</a></li><li><a href="module-modal.html">modal</a></li><li><a href="module-scripts.html">scripts</a></li><li><a href="module-search.html">search</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-utils.html">utils</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Wed Oct 22 2025 15:52:33 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

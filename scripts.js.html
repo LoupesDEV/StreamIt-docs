@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: scripts.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: scripts.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module scripts
+ * @description
+ * Contains main application logic, global event listeners, and utility functions.
+ * Coordinates interactions between modules and manages app-wide behaviors.
+ */
+
+let currentSection = "home";
+
+const sections = document.querySelectorAll(".section");
+const navLinks = document.querySelectorAll(".nav-link");
+const searchInput = document.getElementById("searchInput");
+const modal = document.getElementById("modal");
+const videoModal = document.getElementById("videoModal");
+const videoPlayer = document.getElementById("videoPlayer");
+
+/**
+ * Sets up all global event listeners for navigation, filtering, modals, video tracking, and search.
+ *
+ * @function
+ * @returns {void}
+ */
+function setupEventListeners() {
+  navLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const section = link.dataset.section;
+      showSection(section);
+      setActiveNavLink(link);
+    });
+  });
+
+  searchInput.addEventListener("input", debounce(handleSearch, 300));
+
+  document.querySelectorAll(".close-btn").forEach((btn) => {
+    btn.addEventListener("click", closeModals);
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModals();
+  });
+
+  videoModal.addEventListener("click", (e) => {
+    if (e.target === videoModal) closeModals();
+  });
+
+  document.getElementById("filmGenreFilter").addEventListener("change", () => {
+    displayFilms(getFilteredFilms());
+  });
+
+  document.getElementById("filmYearFilter").addEventListener("change", () => {
+    displayFilms(getFilteredFilms());
+  });
+
+  document
+    .getElementById("filmDirectorFilter")
+    .addEventListener("change", () => {
+      displayFilms(getFilteredFilms());
+    });
+
+  document.getElementById("filmActorFilter").addEventListener("change", () => {
+    displayFilms(getFilteredFilms());
+  });
+
+  document.getElementById("filmRatingFilter").addEventListener("input", (e) => {
+    document.querySelector("#films .rating-value").textContent = parseFloat(
+      e.target.value
+    ).toFixed(1);
+    displayFilms(getFilteredFilms());
+  });
+
+  document
+    .getElementById("seriesGenreFilter")
+    .addEventListener("change", () => {
+      displaySeries(getFilteredSeries());
+    });
+
+  document.getElementById("seriesYearFilter").addEventListener("change", () => {
+    displaySeries(getFilteredSeries());
+  });
+
+  document
+    .getElementById("seriesCreatorFilter")
+    .addEventListener("change", () => {
+      displaySeries(getFilteredSeries());
+    });
+
+  document
+    .getElementById("seriesActorFilter")
+    .addEventListener("change", () => {
+      displaySeries(getFilteredSeries());
+    });
+
+  document
+    .getElementById("seriesRatingFilter")
+    .addEventListener("input", (e) => {
+      document.querySelector("#series .rating-value").textContent = parseFloat(
+        e.target.value
+      ).toFixed(1);
+      displaySeries(getFilteredSeries());
+    });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeModals();
+    }
+  });
+
+  if (videoPlayer) {
+    videoPlayer.addEventListener("timeupdate", handleVideoTimeUpdate);
+    videoPlayer.addEventListener("ended", handleVideoEnded);
+    videoPlayer.addEventListener("pause", handleVideoPause);
+  }
+}
+
+/**
+ * Shows the specified section and updates content as needed.
+ *
+ * @function
+ * @param {string} sectionName - The name of the section to display.
+ * @returns {void}
+ */
+function showSection(sectionName) {
+  sections.forEach((section) => {
+    section.classList.remove("active");
+  });
+
+  document.getElementById(sectionName).classList.add("active");
+  currentSection = sectionName;
+
+  switch (sectionName) {
+    case "films":
+      displayFilms(Object.values(filmsData));
+      break;
+    case "series":
+      displaySeries(Object.values(seriesData));
+      break;
+    case "collections":
+      displayCollections();
+      break;
+    case "search":
+      if (searchInput.value.trim()) {
+        handleSearch();
+      }
+      break;
+  }
+}
+
+/**
+ * Sets the given navigation link as active and removes active state from others.
+ *
+ * @function
+ * @param {Element} activeLink - The navigation link element to activate.
+ * @returns {void}
+ */
+function setActiveNavLink(activeLink) {
+  navLinks.forEach((link) => link.classList.remove("active"));
+  activeLink.classList.add("active");
+}
+
+/**
+ * Handles the global error event for images.
+ *
+ * Replaces broken images with a fallback icon when an image fails to load.
+ *
+ * @event
+ * @param {Event} e - The error event.
+ * @returns {void}
+ */
+document.addEventListener(
+  "error",
+  (e) => {
+    if (e.target.tagName === "IMG") {
+      e.target.style.display = "none";
+      e.target.parentElement.innerHTML = '&lt;i class="fas fa-film">&lt;/i>';
+    }
+  },
+  true
+);
+
+/**
+ * Handles the global keydown event for keyboard shortcuts.
+ *
+ * Focuses the search input when the "/" key is pressed (without Ctrl or Alt).
+ *
+ * @event
+ * @param {KeyboardEvent} e - The keydown event.
+ * @returns {void}
+ */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" &amp;&amp; !e.ctrlKey &amp;&amp; !e.altKey) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+});
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-add.html">add</a></li><li><a href="module-dataLoader.html">dataLoader</a></li><li><a href="module-display.html">display</a></li><li><a href="module-error.html">error</a></li><li><a href="module-filters.html">filters</a></li><li><a href="module-init.html">init</a></li><li><a href="module-modal.html">modal</a></li><li><a href="module-scripts.html">scripts</a></li><li><a href="module-search.html">search</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-utils.html">utils</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Wed Oct 22 2025 15:52:33 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
