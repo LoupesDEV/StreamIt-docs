@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: storage.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: storage.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @module storage
+ * @description
+ * Manages saving and retrieving watched content data in localStorage.
+ * Provides functions to mark content as watched and retrieve watch history.
+ */
+
+let filmsData = {};
+let seriesData = {};
+
+/**
+ * Retrieves the watched content data from localStorage.
+ *
+ * @function
+ * @returns {Object} The watched content data with films and series.
+ */
+function getWatchedContent() {
+  return JSON.parse(
+    localStorage.getItem("watchedContent") || '{"films":{},"series":{}}'
+  );
+}
+
+/**
+ * Saves the watched content data to localStorage.
+ *
+ * @function
+ * @param {Object} data - The watched content data to store.
+ * @returns {void}
+ */
+function setWatchedContent(data) {
+  localStorage.setItem("watchedContent", JSON.stringify(data));
+}
+
+/**
+ * Marks a film as watched or unwatched and updates the last watched time.
+ *
+ * @function
+ * @param {string} title - The title of the film.
+ * @param {boolean} [watched=true] - Whether the film is watched.
+ * @param {number} [time=0] - The last watched timestamp in seconds.
+ * @returns {void}
+ */
+function markFilmWatched(title, watched = true, time = 0) {
+  const data = getWatchedContent();
+  if (!data.films[title]) data.films[title] = {};
+  data.films[title].watched = watched;
+  data.films[title].time = time;
+  setWatchedContent(data);
+}
+
+/**
+ * Retrieves the watch data for a specific film.
+ *
+ * @function
+ * @param {string} title - The title of the film.
+ * @returns {Object} The watch data ({watched: boolean, time: number}).
+ */
+function getFilmWatchData(title) {
+  const data = getWatchedContent();
+  return data.films[title] || { watched: false, time: 0 };
+}
+
+/**
+ * Marks an episode as watched or unwatched and updates the last watched time.
+ *
+ * @function
+ * @param {string} seriesTitle - The title of the series.
+ * @param {string|number} season - The season number or name.
+ * @param {number} epIndex - The episode index.
+ * @param {boolean} [watched=true] - Whether the episode is watched.
+ * @param {number} [time=0] - The last watched timestamp in seconds.
+ * @returns {void}
+ */
+function markEpisodeWatched(
+  seriesTitle,
+  season,
+  epIndex,
+  watched = true,
+  time = 0
+) {
+  const data = getWatchedContent();
+  if (!data.series[seriesTitle]) data.series[seriesTitle] = {};
+  if (!data.series[seriesTitle][season]) data.series[seriesTitle][season] = {};
+  data.series[seriesTitle][season][epIndex] = { watched, time };
+  setWatchedContent(data);
+}
+
+/**
+ * Retrieves the watch data for a specific episode.
+ *
+ * @function
+ * @param {string} seriesTitle - The title of the series.
+ * @param {string|number} season - The season number or name.
+ * @param {number} epIndex - The episode index.
+ * @returns {Object} The watch data ({watched: boolean, time: number}).
+ */
+function getEpisodeWatchData(seriesTitle, season, epIndex) {
+  const data = getWatchedContent();
+  return (
+    (data.series[seriesTitle] &amp;&amp;
+      data.series[seriesTitle][season] &amp;&amp;
+      data.series[seriesTitle][season][epIndex]) || {
+      watched: false,
+      time: 0,
+    }
+  );
+}
+
+/**
+ * Checks if all episodes in a series have been watched.
+ *
+ * @function
+ * @param {Object} series - The series object with seasons and episodes.
+ * @returns {boolean} True if all episodes are watched, false otherwise.
+ */
+function isSeriesFullyWatched(series) {
+  if (!series.seasons) return false;
+  for (const seasonNum in series.seasons) {
+    const episodes = series.seasons[seasonNum];
+    for (let i = 0; i &lt; episodes.length; i++) {
+      const watchData = getEpisodeWatchData(series.title, seasonNum, i);
+      if (!watchData.watched) return false;
+    }
+  }
+  return true;
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-add.html">add</a></li><li><a href="module-dataLoader.html">dataLoader</a></li><li><a href="module-display.html">display</a></li><li><a href="module-error.html">error</a></li><li><a href="module-filters.html">filters</a></li><li><a href="module-init.html">init</a></li><li><a href="module-modal.html">modal</a></li><li><a href="module-scripts.html">scripts</a></li><li><a href="module-search.html">search</a></li><li><a href="module-storage.html">storage</a></li><li><a href="module-utils.html">utils</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Nov 10 2025 16:55:21 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
